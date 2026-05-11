@@ -27,6 +27,6 @@ USER devuser
 # Expose VS Code Server port
 EXPOSE 8080
 
-# Start VS Code Server with no auth (safe behind SSH tunnel)
-CMD ["code-server", "--bind-addr", "0.0.0.0:8080", "--auth", "none", "/workspace"]
+# Start VS Code Server with password auth
+CMD ["code-server", "--bind-addr", "0.0.0.0:8080", "--auth", "password", "/workspace"]
 

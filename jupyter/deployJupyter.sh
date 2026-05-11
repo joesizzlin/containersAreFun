@@ -20,11 +20,13 @@ sleep 1
 echo "=== use CTRL+c when you are done ==="
 sleep 2
 echo "=== 3... ==="
-sleep 1
+sleep 2
 echo "=== 2... ==="
-sleep 1
+sleep 2
 echo "=== 1... ==="
+sleep 2
 echo "=== MUDKIP!! ==="
+sleep 1
 
 echo "=== Starting Docker image: #$IMAGE_NAME ==="
 docker run -it --rm \

@@ -8,6 +8,13 @@ PORT=8080
 echo "=== Ensuring workspace directory exists ==="
 mkdir -p "$WORKSPACE_DIR"
 
+echo "=== Checking for code-server password in environment variable ==="
+echo "=== If not set, you will be prompted to enter one-time use password ==="
+if [ -z "$PASSWORD" ]; then
+  read -s -p "Enter code-server password: " PASSWORD
+  echo
+fi
+
 echo "=== Building Docker image: $IMAGE_NAME ==="
 docker build -t "$IMAGE_NAME" .
 
@@ -18,18 +25,21 @@ sleep 2
 echo "=== Then open http://127.0.0.1:$PORT in your browser ==="
 sleep 1
 echo "=== CTRL+C when you're done ==="
-sleep 1
+sleep 2
 echo "=== 3... ==="
-sleep 1
+sleep 2
 echo "=== 2... ==="
-sleep 1
+sleep 2
 echo "=== 1... ==="
+sleep 2
 echo "=== MUDKIP!! ==="
+sleep 1
 
 echo "=== Starting Docker container: $CONTAINER_NAME ==="
 docker run -it --rm \
   --name "$CONTAINER_NAME" \
   -p "$PORT":8080 \
+  -e PASSWORD="$PASSWORD" \
   -v "$WORKSPACE_DIR":/workspace \
   "$IMAGE_NAME"
 
