@@ -1,3 +1,4 @@
+#!/bin/bash
 set -e
 
 IMAGE_NAME="juice-shop"
