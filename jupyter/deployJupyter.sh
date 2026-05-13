@@ -1,39 +1,16 @@
 #!/bin/bash
 set -e
 
-IMAGE_NAME="jupyter-py-lab"
-CONTAINER_NAME="jupyterlab-dev"
-WORKSPACE_DIR="$HOME/workspaces/jupyter_workspace"
-PORT=8888
+echo "This repository now provides two dedicated Jupyter deployment scripts:"
+echo "  ./deploy_jupyter_docker.sh"
+echo "  ./deploy_jupyter_podman.sh"
+echo
+if [ "$1" = "docker" ]; then
+  exec ./deploy_jupyter_docker.sh
+elif [ "$1" = "podman" ]; then
+  exec ./deploy_jupyter_podman.sh
+fi
 
-echo "=== Ensuring workspace directory exists ==="
-mkdir -p "$WORKSPACE_DIR"
-
-echo "=== Building Docker image: $IMAGE_NAME ==="
-docker build -t "$IMAGE_NAME" .
-
-echo "=== Be sure to tunnel to as localhost, opening another terminal window is fine ==="
-sleep 1
-echo "=== Copy and paste --> ssh -L "$PORT":localhost:"$PORT" "$USER"@<YOUR_VM_IP> ==="
-sleep 2
-echo "=== Soon you will see something like "http://127.0.0.1:"$PORT"/lab?token="<STUFF>"" to paste in web browser ==="
-sleep 1
-echo "=== use CTRL+c when you are done ==="
-sleep 2
-echo "=== 3... ==="
-sleep 2
-echo "=== 2... ==="
-sleep 2
-echo "=== 1... ==="
-sleep 2
-echo "=== MUDKIP!! ==="
-sleep 1
-
-echo "=== Starting Docker image: #$IMAGE_NAME ==="
-docker run -it --rm \
-  --name "$CONTAINER_NAME" \
-  -p "$PORT":8888 \
-  -v "$WORKSPACE_DIR":/workspace \
-  "$IMAGE_NAME"
-
-echo "=== JupyterLab container "$CONTAINER_NAME" finished running ===" 
+echo "Usage: ./deployJupyter.sh [docker|podman]"
+echo "Alternatively, call ./deploy_jupyter_docker.sh or ./deploy_jupyter_podman.sh directly."
+exit 1

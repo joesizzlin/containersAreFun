@@ -1,47 +1,16 @@
 #!/bin/bash
 set -e
 
-IMAGE_NAME="vscode-server"
-CONTAINER_NAME="vscode-dev"
-WORKSPACE_DIR="$HOME/workspaces/vscode_workspace"
-PORT=8080
-
-echo "=== Ensuring workspace directory exists ==="
-mkdir -p "$WORKSPACE_DIR"
-
-echo "=== Checking for code-server password in environment variable ==="
-echo "=== If not set, you will be prompted to enter one-time use password ==="
-if [ -z "$PASSWORD" ]; then
-  read -s -p "Enter code-server password: " PASSWORD
-  echo
+echo "This repository now provides two dedicated VS Code deployment scripts:"
+echo "  ./deploy_vscode_docker.sh"
+echo "  ./deploy_vscode_podman.sh"
+echo
+if [ "$1" = "docker" ]; then
+  exec ./deploy_vscode_docker.sh
+elif [ "$1" = "podman" ]; then
+  exec ./deploy_vscode_podman.sh
 fi
 
-echo "=== Building Docker image: $IMAGE_NAME ==="
-docker build -t "$IMAGE_NAME" .
-
-echo "=== Be sure to tunnel to this port in another terminal ==="
-sleep 1
-echo "=== Copy and paste --> ssh -L $PORT:localhost:$PORT $USER@<YOUR_VM_IP> ==="
-sleep 2
-echo "=== Then open http://127.0.0.1:$PORT in your browser ==="
-sleep 1
-echo "=== CTRL+C when you're done ==="
-sleep 2
-echo "=== 3... ==="
-sleep 2
-echo "=== 2... ==="
-sleep 2
-echo "=== 1... ==="
-sleep 2
-echo "=== MUDKIP!! ==="
-sleep 1
-
-echo "=== Starting Docker container: $CONTAINER_NAME ==="
-docker run -it --rm \
-  --name "$CONTAINER_NAME" \
-  -p "$PORT":8080 \
-  -e PASSWORD="$PASSWORD" \
-  -v "$WORKSPACE_DIR":/workspace \
-  "$IMAGE_NAME"
-
-echo "=== VS Code Server container $CONTAINER_NAME finished running ==="
+echo "Usage: ./deploy_vscode.sh [docker|podman]"
+echo "Alternatively, call ./deploy_vscode_docker.sh or ./deploy_vscode_podman.sh directly."
+exit 1
