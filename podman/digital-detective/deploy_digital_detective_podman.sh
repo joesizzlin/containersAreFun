@@ -27,9 +27,6 @@ sleep 2
 echo "=== 2... ==="
 sleep 2
 echo "=== 1... ==="
-sleep 2
-echo "=== MUDKIP!! ==="
-sleep 1
 
 podman run -it --rm \
   --name "$CONTAINER_NAME" \

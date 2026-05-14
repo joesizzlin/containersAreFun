@@ -50,6 +50,7 @@ WORKDIR /root/forensics
 
 # Print installed forensics tools on startup
 RUN echo '#!/bin/bash' > /entrypoint.sh && \
+    echo 'echo "MUDKIP!!"' >> /entrypoint.sh && \
     echo 'echo "=== Forensics Container Ready ===" ' >> /entrypoint.sh && \
     echo 'echo "Available tools:"' >> /entrypoint.sh && \
     echo 'echo "  - Volatility3 (memory forensics): volatility"' >> /entrypoint.sh && \
