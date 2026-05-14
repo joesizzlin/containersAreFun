@@ -3,8 +3,10 @@ set -e
 
 IMAGE_NAME="vscode-server"
 CONTAINER_NAME="vscode-dev"
-WORKSPACE_DIR="$HOME/workspaces/vscode_workspace"
+WORKSPACE_DIR="${1:-$HOME/workspaces/vscode_workspace}"
 PORT=8080
+HOST_UID=$(id -u)
+HOST_GID=$(id -g)
 
 if [ -z "$PASSWORD" ]; then
   read -s -p "Enter code-server password: " PASSWORD
@@ -38,6 +40,7 @@ sleep 1
 echo "=== Starting container: $CONTAINER_NAME ==="
 podman run -it --rm \
   --name "$CONTAINER_NAME" \
+  --user "$HOST_UID:$HOST_GID" \
   -p "$PORT":8080 \
   -e PASSWORD="$PASSWORD" \
   -v "$WORKSPACE_DIR":/workspace \
