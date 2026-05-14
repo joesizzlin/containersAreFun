@@ -1,0 +1,68 @@
+FROM ubuntu:22.04
+
+# Set non-interactive mode
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Update package lists and install base dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    python3 \
+    python3-pip \
+    python3-dev \
+    git \
+    curl \
+    wget \
+    vim \
+    nano \
+    htop \
+    tree \
+    file \
+    xxd \
+    hexdump \
+    strings \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Sleuth Kit (disk forensics)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    sleuthkit \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install YARA (malware research & pattern matching)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    yara \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Volatility3 (memory forensics) via pip
+RUN pip install --no-cache-dir volatility3
+
+# Install additional Python forensics libraries
+RUN pip install --no-cache-dir \
+    pycryptodome \
+    capstone \
+    yara-python \
+    dpkt \
+    scapy
+
+# Create forensics working directories
+RUN mkdir -p /root/forensics /mnt/evidence /mnt/tools /mnt/output
+
+# Set working directory
+WORKDIR /root/forensics
+
+# Print installed forensics tools on startup
+RUN echo '#!/bin/bash' > /entrypoint.sh && \
+    echo 'echo "=== Forensics Container Ready ===" ' >> /entrypoint.sh && \
+    echo 'echo "Available tools:"' >> /entrypoint.sh && \
+    echo 'echo "  - Volatility3 (memory forensics): volatility"' >> /entrypoint.sh && \
+    echo 'echo "  - The Sleuth Kit (disk forensics): fls, istat, ils, etc."' >> /entrypoint.sh && \
+    echo 'echo "  - YARA (pattern matching): yara"' >> /entrypoint.sh && \
+    echo 'echo "  - Python forensics libraries: pycryptodome, capstone, scapy, etc."' >> /entrypoint.sh && \
+    echo 'echo "Mounted volumes:"' >> /entrypoint.sh && \
+    echo 'echo "  - /mnt/evidence - place evidence files here"' >> /entrypoint.sh && \
+    echo 'echo "  - /mnt/tools - place custom tools/scripts here"' >> /entrypoint.sh && \
+    echo 'echo "  - /mnt/output - output results here"' >> /entrypoint.sh && \
+    echo 'exec /bin/bash' >> /entrypoint.sh && \
+    chmod +x /entrypoint.sh
+
+# Set entrypoint
+ENTRYPOINT ["/entrypoint.sh"]
