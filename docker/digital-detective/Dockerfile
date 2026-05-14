@@ -17,9 +17,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     htop \
     tree \
     file \
-    xxd \
-    hexdump \
-    strings \
+    bsdmainutils \
+    binutils \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Sleuth Kit (disk forensics)
