@@ -19,6 +19,7 @@ sleep 1
 echo "=== Copy and paste --> ssh -L $PORT:localhost:$PORT $USER@<YOUR_VM_IP> ==="
 sleep 2
 echo "=== Soon you will see something like http://127.0.0.1:$PORT/lab?token=<STUFF> to paste in your browser ==="
+echo "=== With Podman, the first deployment and key assignment will take a moment ==="
 sleep 1
 echo "=== use CTRL+c when you are done ==="
 sleep 2
