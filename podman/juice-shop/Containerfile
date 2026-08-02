@@ -1,4 +1,7 @@
-FROM bkimminich/juice-shop:latest
+# TODO: pin by digest for reproducibility + provenance:
+#   podman image inspect --format '{{index .RepoDigests 0}}' docker.io/bkimminich/juice-shop:latest
+# then replace the tag below with @sha256:<digest>
+FROM docker.io/bkimminich/juice-shop:latest
 
 # Expose Juice Shop port
 EXPOSE 3000

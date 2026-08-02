@@ -1,13 +1,14 @@
 #!/bin/bash
-set -e
+set -euo pipefail
 
 IMAGE_NAME="digital-detective"
 CONTAINER_NAME="digital-detective-dev"
-EVIDENCE_DIR="$HOME/workspaces/digital-detective/evidence"
+# Use the first script argument as the evidence directory if provided; otherwise fall back to the default path.
+EVIDENCE_DIR="${1:-$HOME/workspaces/digital-detective/evidence}"
 TOOLS_DIR="$HOME/workspaces/digital-detective/tools"
 OUTPUT_DIR="$HOME/workspaces/digital-detective/output"
 
-echo "=== Using container runtime: podman ==="
+echo "=== Using container runtime: podman (rootless) ==="
 echo "=== Ensuring workspace directories exist ==="
 mkdir -p "$EVIDENCE_DIR"
 mkdir -p "$TOOLS_DIR"
@@ -28,11 +29,16 @@ echo "=== 2... ==="
 sleep 2
 echo "=== 1... ==="
 
+# No --userns needed here: this image runs as container root, and under
+# rootless podman container UID 0 already maps to your host UID.
+# :Z relabels each mount for SELinux (RHEL enforcing) - without it the
+# container gets AVC denials regardless of Unix permissions.
 podman run -it --rm \
   --name "$CONTAINER_NAME" \
-  -v "$EVIDENCE_DIR":/mnt/evidence \
-  -v "$TOOLS_DIR":/mnt/tools \
-  -v "$OUTPUT_DIR":/mnt/output \
+  --security-opt=no-new-privileges \
+  -v "$EVIDENCE_DIR":/mnt/evidence:Z \
+  -v "$TOOLS_DIR":/mnt/tools:Z \
+  -v "$OUTPUT_DIR":/mnt/output:Z \
   "$IMAGE_NAME"
 
 echo "=== Digital detective container $CONTAINER_NAME finished running ==="

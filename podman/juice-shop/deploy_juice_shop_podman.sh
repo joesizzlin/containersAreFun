@@ -1,11 +1,11 @@
 #!/bin/bash
-set -e
+set -euo pipefail
 
 IMAGE_NAME="juice-shop"
 CONTAINER_NAME="juice-shop-dev"
 PORT=3000
 
-echo "=== Using container runtime: podman ==="
+echo "=== Using container runtime: podman (rootless) ==="
 echo "=== Building image: $IMAGE_NAME ==="
 podman build -t "$IMAGE_NAME" .
 
@@ -27,9 +27,14 @@ echo "=== MUDKIP!! ==="
 sleep 1
 
 echo "=== Starting container: $CONTAINER_NAME ==="
+# Bind loopback only. Juice Shop is intentionally vulnerable; publishing it
+# on 0.0.0.0 exposes it to anything your Azure NSG allows. The SSH -L tunnel
+# above still reaches 127.0.0.1 on the VM, so nothing is lost.
 podman run -it --rm \
   --name "$CONTAINER_NAME" \
-  -p "$PORT":3000 \
+  --cap-drop=ALL \
+  --security-opt=no-new-privileges \
+  -p 127.0.0.1:"$PORT":3000 \
   "$IMAGE_NAME"
 
 echo "=== Juice Shop container $CONTAINER_NAME finished running ==="

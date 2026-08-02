@@ -1,12 +1,13 @@
 #!/bin/bash
-set -e
+set -euo pipefail
 
 IMAGE_NAME="streamlit-app"
 CONTAINER_NAME="streamlit-dev"
-WORKSPACE_DIR="$HOME/workspaces/streamlit_workspace"
+# Use the first script argument as the workspace directory if provided; otherwise fall back to the default path.
+WORKSPACE_DIR="${1:-$HOME/workspaces/streamlit_workspace}"
 PORT=8501
 
-echo "=== Using container runtime: podman ==="
+echo "=== Using container runtime: podman (rootless) ==="
 echo "=== Ensuring workspace directory exists ==="
 mkdir -p "$WORKSPACE_DIR"
 
@@ -31,10 +32,15 @@ echo "=== MUDKIP!! ==="
 sleep 1
 
 echo "=== Starting container: $CONTAINER_NAME ==="
+# Keep the host UID/GID mapped into the container so the mounted workspace stays writable
+# for the user running this script; without it, files may be owned by a different UID/GID.
 podman run -it --rm \
   --name "$CONTAINER_NAME" \
-  -p "$PORT":8501 \
-  -v "$WORKSPACE_DIR":/workspace \
+  --userns=keep-id:uid=1000,gid=1000 \
+  --cap-drop=ALL \
+  --security-opt=no-new-privileges \
+  -p 127.0.0.1:"$PORT":8501 \
+  -v "$WORKSPACE_DIR":/workspace:Z \
   "$IMAGE_NAME"
 
 echo "=== Streamlit container $CONTAINER_NAME finished running ==="

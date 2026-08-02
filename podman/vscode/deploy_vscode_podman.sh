@@ -1,19 +1,18 @@
 #!/bin/bash
-set -e
+set -euo pipefail
 
 IMAGE_NAME="vscode-server"
 CONTAINER_NAME="vscode-dev"
 WORKSPACE_DIR="${1:-$HOME/workspaces/vscode_workspace}"
 PORT=8080
-HOST_UID=$(id -u)
-HOST_GID=$(id -g)
+SECRET_NAME="vscode-password"
 
-if [ -z "$PASSWORD" ]; then
+if [ -z "${PASSWORD:-}" ]; then
   read -s -p "Enter code-server password: " PASSWORD
   echo
 fi
 
-echo "=== Using container runtime: podman ==="
+echo "=== Using container runtime: podman (rootless) ==="
 echo "=== Ensuring workspace directory exists ==="
 mkdir -p "$WORKSPACE_DIR"
 
@@ -37,13 +36,21 @@ sleep 2
 echo "=== MUDKIP!! ==="
 sleep 1
 
+# Store the password as a podman secret instead of passing -e PASSWORD=...,
+# which would expose it via `podman inspect`, /proc/1/environ and shell history.
+printf '%s' "$PASSWORD" | podman secret create --replace "$SECRET_NAME" -
+unset PASSWORD
+trap 'podman secret rm "$SECRET_NAME" >/dev/null 2>&1 || true' EXIT
+
 echo "=== Starting container: $CONTAINER_NAME ==="
 podman run -it --rm \
   --name "$CONTAINER_NAME" \
-  --user "$HOST_UID:$HOST_GID" \
-  -p "$PORT":8080 \
-  -e PASSWORD="$PASSWORD" \
-  -v "$WORKSPACE_DIR":/workspace \
+  --userns=keep-id:uid=1000,gid=1000 \
+  --cap-drop=ALL \
+  --security-opt=no-new-privileges \
+  -p 127.0.0.1:"$PORT":8080 \
+  --secret "$SECRET_NAME",type=env,target=PASSWORD \
+  -v "$WORKSPACE_DIR":/workspace:Z \
   "$IMAGE_NAME"
 
 echo "=== VS Code Server container $CONTAINER_NAME finished running ==="

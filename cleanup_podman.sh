@@ -1,5 +1,5 @@
 #!/bin/bash
-set -e
+set -euo pipefail
 
 IMAGES=(
   "digital-detective"
@@ -9,6 +9,9 @@ IMAGES=(
   "vscode-server"
 )
 
+# NOTE: rootless podman keeps per-user storage under ~/.local/share/containers.
+# This only cleans the invoking user's containers/images - running it as root
+# (or as another user) touches a completely separate store.
 echo "=== Podman Cleanup Script ==="
 echo ""
 
@@ -29,6 +32,12 @@ for image in "${IMAGES[@]}"; do
     echo "⊘ Image not found: $image (skipping)"
   fi
 done
+echo ""
+
+# Rebuilds leave dangling layers behind; prune them and the build cache.
+echo "=== Removing dangling images and build cache ==="
+podman image prune -f
+podman system prune -f --volumes=false || true
 echo ""
 
 echo "=== Podman cleanup complete ==="

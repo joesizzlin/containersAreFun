@@ -1,12 +1,13 @@
 #!/bin/bash
-set -e
+set -euo pipefail
 
 IMAGE_NAME="jupyter-py-lab"
 CONTAINER_NAME="jupyterlab-dev"
-WORKSPACE_DIR="$HOME/workspaces/jupyter_workspace"
+# Use the first script argument as the workspace directory if provided; otherwise fall back to the default path.
+WORKSPACE_DIR="${1:-$HOME/workspaces/jupyter_workspace}"
 PORT=8888
 
-echo "=== Using container runtime: podman ==="
+echo "=== Using container runtime: podman (rootless) ==="
 echo "=== Ensuring workspace directory exists ==="
 mkdir -p "$WORKSPACE_DIR"
 
@@ -31,10 +32,16 @@ echo "=== MUDKIP!! ==="
 sleep 1
 
 echo "=== Starting container: $CONTAINER_NAME ==="
+# --userns=keep-id:uid=1000,gid=1000 maps YOUR host UID to container UID 1000
+# (devuser). Without it, container UID 1000 lands on a subuid (~100999) that
+# does not own $WORKSPACE_DIR, and JupyterLab fails to write its runtime dirs.
 podman run -it --rm \
   --name "$CONTAINER_NAME" \
-  -p "$PORT":8888 \
-  -v "$WORKSPACE_DIR":/workspace \
+  --userns=keep-id:uid=1000,gid=1000 \
+  --cap-drop=ALL \
+  --security-opt=no-new-privileges \
+  -p 127.0.0.1:"$PORT":8888 \
+  -v "$WORKSPACE_DIR":/workspace:Z \
   "$IMAGE_NAME"
 
 echo "=== JupyterLab container $CONTAINER_NAME finished running ==="
