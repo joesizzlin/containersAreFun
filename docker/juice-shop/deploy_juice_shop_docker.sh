@@ -1,13 +1,75 @@
 #!/bin/bash
-set -e
+set -euo pipefail
 
 IMAGE_NAME="juice-shop"
 CONTAINER_NAME="juice-shop-dev"
+OLLAMA_CONTAINER="juice-shop-ollama"
+OLLAMA_IMAGE="ollama/ollama:latest"
+OLLAMA_MODEL="${OLLAMA_MODEL:-llama3.2:3b}"
 PORT=3000
+
+# Juice Shop reads ALCHEMY_API_KEY from its environment to enable the web3
+# challenges ("Mint the Honey Pot", "Wallet Depletion"). Never hardcode it
+# here. Either export it before running this script, or drop a line
+# ALCHEMY_API_KEY=... into the file below and chmod 600 it.
+SECRET_FILE="${HOME}/.config/juice-shop/alchemy.env"
+ALCHEMY_API_KEY="${ALCHEMY_API_KEY:-}"
+if [[ -z "$ALCHEMY_API_KEY" && -r "$SECRET_FILE" ]]; then
+  # shellcheck disable=SC1090
+  source "$SECRET_FILE"
+  ALCHEMY_API_KEY="${ALCHEMY_API_KEY:-}"
+fi
+
+cleanup() {
+  echo "=== Removing sidecar container: $OLLAMA_CONTAINER ==="
+  docker rm -f "$OLLAMA_CONTAINER" >/dev/null 2>&1 || true
+}
+trap cleanup EXIT
 
 echo "=== Using container runtime: docker ==="
 echo "=== Building image: $IMAGE_NAME ==="
 docker build -t "$IMAGE_NAME" .
+
+docker rm -f "$OLLAMA_CONTAINER" >/dev/null 2>&1 || true
+
+# Juice Shop's LLM challenges expect an OpenAI-compatible endpoint at
+# http://localhost:11434/v1. "localhost" resolves inside the container's
+# network namespace, so an Ollama instance on the Docker host is unreachable.
+# Docker has no pods, so the equivalent is to start Ollama first and then
+# join Juice Shop to its namespace with --network container:<name>. That
+# makes the URL resolve with no application config changes.
+#
+# Consequence: the namespace owner (Ollama) publishes the ports, so the
+# Juice Shop mapping lives on this run command. Bind loopback only --
+# The SSH -L tunnel below still reaches 127.0.0.1 on the host. 11434 is deliberately NOT published.
+echo "=== Starting Ollama (owns the shared network namespace) ==="
+docker run -d \
+  --name "$OLLAMA_CONTAINER" \
+  --security-opt=no-new-privileges \
+  -v ollama-models:/root/.ollama \
+  -p 127.0.0.1:"$PORT":3000 \
+  "$OLLAMA_IMAGE"
+
+echo -n "=== Waiting for Ollama on :11434 "
+for _ in $(seq 1 60); do
+  if docker exec "$OLLAMA_CONTAINER" ollama list >/dev/null 2>&1; then
+    echo " ready ==="
+    break
+  fi
+  echo -n "."
+  sleep 1
+done
+
+echo "=== Pulling model: $OLLAMA_MODEL (cached in volume after first run) ==="
+docker exec "$OLLAMA_CONTAINER" ollama pull "$OLLAMA_MODEL"
+
+RUN_ENV=()
+if [[ -n "$ALCHEMY_API_KEY" ]]; then
+  RUN_ENV+=(-e "ALCHEMY_API_KEY=$ALCHEMY_API_KEY")
+  echo "=== ALCHEMY_API_KEY loaded: web3 challenges enabled ==="
+else
+  echo "=== No ALCHEMY_API_KEY found: web3 challenges will warn ==="
+fi
 
 echo "=== Be sure to tunnel to this port in another terminal ==="
 sleep 1
@@ -27,9 +89,14 @@ echo "=== MUDKIP!! ==="
 sleep 1
 
 echo "=== Starting container: $CONTAINER_NAME ==="
+# No -p here: the namespace owner above holds the port mapping. Docker
+# rejects --publish when --network container: is in use.
 docker run -it --rm \
   --name "$CONTAINER_NAME" \
-  -p "$PORT":3000 \
+  --network "container:$OLLAMA_CONTAINER" \
+  --cap-drop=ALL \
+  --security-opt=no-new-privileges \
+  "${RUN_ENV[@]}" \
   "$IMAGE_NAME"
 
 echo "=== Juice Shop container $CONTAINER_NAME finished running ==="
